@@ -119,11 +119,26 @@ fn wait_for_pid(pid: libc::pid_t) -> libc::rusage {
 // https://stackoverflow.com/a/12480485/5552584
 
 fn main() {
-    let start = rtime();
+    #[cfg(target_os = "macos")]
+    let rtime_fn = {
+        use os_info::Version;
+        let info = os_info::get();
+        let vers = info.version();
+        if vers <= &Version::Semantic(10, 12, 0) {
+            rtime_gettimeofday
+        } else {
+            rtime
+        }
+    };
+
+    #[cfg(not(target_os = "macos"))]
+    let rtime_fn = rtime;
+
+    let start = rtime_fn();
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
             let u = wait_for_pid(child.as_raw());
-            println!("real: {:?}", (rtime() - start));
+            println!("real: {:?}", (rtime_fn() - start));
             println!("user: {:?}", (timeval_to_duration(u.ru_utime)));
             println!("sys:  {:?}", (timeval_to_duration(u.ru_stime)));
         }
