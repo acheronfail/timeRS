@@ -70,7 +70,8 @@ pub fn stime() -> Duration {
 }
 
 // TODO: compilation directive for older versions of macos (< 10.12)
-pub fn rtime_old() -> Duration {
+#[cfg(target_os = "macos")]
+pub fn rtime_gettimeofday() -> Duration {
     let mut t = timeval!();
     unsafe {
         libc::gettimeofday(
