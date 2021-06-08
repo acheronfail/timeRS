@@ -69,7 +69,6 @@ pub fn stime() -> Duration {
     timeval_to_duration(u.ru_stime)
 }
 
-// TODO: compilation directive for older versions of macos (< 10.12)
 #[cfg(target_os = "macos")]
 pub fn rtime_gettimeofday() -> Duration {
     let mut t = timeval!();
@@ -85,7 +84,6 @@ pub fn rtime_gettimeofday() -> Duration {
 fn rtime() -> Duration {
     let mut t = timespec!();
     unsafe {
-        // TODO: use libc::CLOCK_MONOTONIC with clock_gettime ? should be available on macos 10.12+
         libc::clock_gettime(libc::CLOCK_MONOTONIC, (&mut t) as *mut libc::timespec);
     }
 
