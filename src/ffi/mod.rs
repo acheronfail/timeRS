@@ -1,8 +1,9 @@
-pub mod convert;
-pub mod real_time;
-pub use real_time::rtime;
-
 use std::mem::MaybeUninit;
+use std::time::Duration;
+
+pub fn timeval_to_duration(t: libc::timeval) -> Duration {
+    Duration::new(t.tv_sec as u64, (t.tv_usec as u32) * 1_000)
+}
 
 pub fn wait_for_pid(pid: libc::pid_t) -> libc::rusage {
     let mut u: MaybeUninit<libc::rusage> = MaybeUninit::uninit();
