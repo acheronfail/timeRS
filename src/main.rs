@@ -9,8 +9,8 @@ fn main() {
         Ok(ForkResult::Parent { child }) => {
             let u = ffi::wait_for_pid(child.as_raw());
             println!("real: {:?}", ffi::rtime() - start);
-            println!("user: {:?}", ffi::timeval_to_duration(u.ru_utime));
-            println!("sys:  {:?}", ffi::timeval_to_duration(u.ru_stime));
+            println!("user: {:?}", ffi::convert::timeval_to_duration(u.ru_utime));
+            println!("sys:  {:?}", ffi::convert::timeval_to_duration(u.ru_stime));
         }
         Ok(ForkResult::Child) => {
             let cmd = CString::new("sleep").unwrap();
