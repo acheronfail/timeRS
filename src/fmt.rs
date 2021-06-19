@@ -25,9 +25,9 @@ pub fn duration_formatter(time_format: Option<TimeFormat>) -> impl Fn(Duration) 
             } else {
                 let nanos = d.subsec_nanos();
                 if nanos >= 1_000_000 {
-                    format!("{:.6}ms", duration_millis_f64(d))
+                    format!("{:.9}ms", duration_millis_f64(d))
                 } else if nanos >= 1_000 {
-                    format!("{:.3}µs", duration_micros_f64(d))
+                    format!("{:.9}µs", duration_micros_f64(d))
                 } else {
                     format!("{}ns", duration_nanos_u64(d))
                 }
