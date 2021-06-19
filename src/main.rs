@@ -6,14 +6,19 @@ use nix::unistd::{execvp, fork, ForkResult};
 use std::ffi::CString;
 use std::time::{Duration, Instant};
 
+/// Returns the milliseconds, with nanoseconds contained in an `f64`.
 fn duration_millis_f64(d: Duration) -> f64 {
-    (d.as_secs() as f64 / 1_000.0) + (d.subsec_nanos() as f64 / 1_000_000.0)
+    (d.as_secs() * 1_000) as f64 + (d.subsec_nanos() as f64 / 1_000_000.0)
 }
+
+/// Returns the microseconds, with nanoseconds contained in an `f64`.
 fn duration_micros_f64(d: Duration) -> f64 {
-    (d.as_secs() as f64 / 1_000_000.0) + (d.subsec_nanos() as f64 / 1_000.0)
+    (d.as_secs() * 1_000_000) as f64 + (d.subsec_nanos() as f64 / 1_000.0)
 }
+
+/// The lowest form of measurement, as such it does not return an `f64` but a `u64`.
 fn duration_nanos_f64(d: Duration) -> u64 {
-    (d.as_secs() as u64 / 1_000_000_000) + (d.subsec_nanos() as u64)
+    (d.as_secs() * 1_000_000_000) + (d.subsec_nanos() as u64)
 }
 
 fn main() {
