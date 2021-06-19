@@ -17,7 +17,7 @@ fn duration_micros_f64(d: Duration) -> f64 {
 }
 
 /// The lowest form of measurement, as such it does not return an `f64` but a `u64`.
-fn duration_nanos_f64(d: Duration) -> u64 {
+fn duration_nanos_u64(d: Duration) -> u64 {
     (d.as_secs() * 1_000_000_000) + (d.subsec_nanos() as u64)
 }
 
@@ -26,39 +26,39 @@ fn main() {
     let start = Instant::now();
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
-            let u = ffi::wait_for_pid(child.as_raw());
+            let usage = ffi::wait_for_pid(child.as_raw());
             let real = start.elapsed();
-            let user = ffi::timeval_to_duration(u.ru_utime);
-            let sys = ffi::timeval_to_duration(u.ru_stime);
 
-            // TODO: right align measurements
-            match args.time_format {
-                None | Some(TimeFormat::Normal) => {
-                    println!("real: {:?}", real);
-                    println!("user: {:?}", user);
-                    println!("sys:  {:?}", sys);
-                }
-                Some(TimeFormat::Seconds) => {
-                    println!("real: {}s", real.as_secs_f64());
-                    println!("user: {}s", user.as_secs_f64());
-                    println!("sys:  {}s", sys.as_secs_f64());
-                }
-                Some(TimeFormat::Milli) => {
-                    println!("real: {}ms", duration_millis_f64(real));
-                    println!("user: {}ms", duration_millis_f64(user));
-                    println!("sys:  {}ms", duration_millis_f64(sys));
-                }
-                Some(TimeFormat::Micro) => {
-                    println!("real: {}µs", duration_micros_f64(real));
-                    println!("user: {}µs", duration_micros_f64(user));
-                    println!("sys:  {}µs", duration_micros_f64(sys));
-                }
-                Some(TimeFormat::Nano) => {
-                    println!("real: {}ns", duration_nanos_f64(real));
-                    println!("user: {}ns", duration_nanos_f64(user));
-                    println!("sys:  {}ns", duration_nanos_f64(sys));
-                }
-            }
+            let fmt = match args.time_format {
+                None | Some(TimeFormat::Normal) => |d: Duration| {
+                    if d.as_secs() > 0 {
+                        format!("{:.9}s ", d.as_secs_f64())
+                    } else {
+                        let nanos = d.subsec_nanos();
+                        if nanos >= 1_000_000 {
+                            format!("{:.6}ms", duration_millis_f64(d))
+                        } else if nanos >= 1_000 {
+                            format!("{:.3}µs", duration_micros_f64(d))
+                        } else {
+                            format!("{}ns", duration_nanos_u64(d))
+                        }
+                    }
+                },
+                Some(TimeFormat::Seconds) => |d: Duration| format!("{:.9}s", d.as_secs_f64()),
+                Some(TimeFormat::Milli) => |d: Duration| format!("{:.6}ms", duration_millis_f64(d)),
+                Some(TimeFormat::Micro) => |d: Duration| format!("{:.3}µs", duration_micros_f64(d)),
+                Some(TimeFormat::Nano) => |d: Duration| format!("{}ns", duration_nanos_u64(d)),
+            };
+
+            let real = fmt(real);
+            let user = fmt(ffi::timeval_to_duration(usage.ru_utime));
+            let sys = fmt(ffi::timeval_to_duration(usage.ru_stime));
+
+            // SAFETY: None is only returned if the iterator is empty.
+            let len = *[real.len(), user.len(), sys.len()].iter().max().unwrap();
+            println!("real: {:>width$}", real, width = len);
+            println!("user: {:>width$}", user, width = len);
+            println!("sys:  {:>width$}", sys, width = len);
         }
         Ok(ForkResult::Child) => {
             // TODO: use a logging lib rather than just printing
