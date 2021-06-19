@@ -1,5 +1,5 @@
 use clap::AppSettings::{ColoredHelp, TrailingVarArg};
-use clap::ArgSettings::{AllowEmptyValues, AllowHyphenValues};
+use clap::ArgSettings::{AllowEmptyValues, AllowHyphenValues, Required};
 use clap::{Clap, crate_authors, crate_version};
 
 #[derive(Debug, Clap)]
@@ -22,8 +22,8 @@ pub struct Args {
     #[clap(short = 't', long = "time", arg_enum)]
     pub time_format: Option<TimeFormat>,
 
-    #[clap(setting = AllowHyphenValues, setting = AllowEmptyValues)]
-    pub args: Vec<String>,
+    #[clap(setting = AllowHyphenValues, setting = AllowEmptyValues, setting = Required)]
+    pub command_line: Vec<String>,
 }
 
 impl Args {

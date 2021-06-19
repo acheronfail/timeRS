@@ -57,10 +57,10 @@ fn main() {
         }
         Ok(ForkResult::Child) => {
             // TODO: use a logging lib rather than just printing
-            eprintln!("program: {}", args.args.join(" "));
+            eprintln!("program: {}", args.command_line.join(" "));
 
             let c_args = args
-                .args
+                .command_line
                 .into_iter()
                 // SAFETY: Is there a way to pass null bytes as arguments on the command line?
                 .map(|s| CString::new(s).unwrap())
