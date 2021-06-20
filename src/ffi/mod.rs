@@ -5,7 +5,7 @@ pub fn timeval_to_duration(t: libc::timeval) -> Duration {
     Duration::new(t.tv_sec as u64, (t.tv_usec as u32) * 1_000)
 }
 
-pub fn wait_for_pid(pid: libc::pid_t) -> libc::rusage {
+pub fn wait_for_pid(pid: libc::pid_t) -> (i32, libc::rusage) {
     let mut usage: MaybeUninit<libc::rusage> = MaybeUninit::uninit();
     let mut status = 0;
     let options = 0;
@@ -27,7 +27,7 @@ pub fn wait_for_pid(pid: libc::pid_t) -> libc::rusage {
         }
     }
 
-    unsafe { usage.assume_init() }
+    (status, unsafe { usage.assume_init() })
 }
 
 #[cfg(test)]

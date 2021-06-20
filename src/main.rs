@@ -3,16 +3,33 @@ mod ffi;
 mod fmt;
 
 use cli::Args;
+use flexi_logger::{colored_default_format, Logger};
 use nix::unistd::{execvp, fork, ForkResult};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::time::Instant;
 
 fn main() {
+    Logger::try_with_env_or_str("info")
+        .expect("Failed to initialise logger")
+        .format(colored_default_format)
+        .start()
+        .expect("Failed to initialise logger");
+
     let args = Args::parse();
+    log::trace!("{:?}", args);
+    log::info!("cmdline:   {}", args.command_line.join(" "));
+
+    let c_args = args
+        .command_line
+        .into_iter()
+        // SAFETY: Is there a way to pass null bytes as arguments on the command line?
+        .map(|s| CString::new(s).unwrap())
+        .collect::<Vec<_>>();
+
     let start = Instant::now();
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
-            let usage = ffi::wait_for_pid(child.as_raw());
+            let (status, usage) = ffi::wait_for_pid(child.as_raw());
             let real = start.elapsed();
 
             let fmt = fmt::duration_formatter(args.time_format);
@@ -20,28 +37,32 @@ fn main() {
             let user = fmt(ffi::timeval_to_duration(usage.ru_utime));
             let sys = fmt(ffi::timeval_to_duration(usage.ru_stime));
 
+            if libc::WIFEXITED(status) {
+                log::info!("exit code: {}", libc::WEXITSTATUS(status));
+            }
+            if libc::WIFSIGNALED(status) {
+                let signal = libc::WTERMSIG(status);
+                // SAFETY: TODO
+                let signal_name = unsafe { CStr::from_ptr(libc::strsignal(signal)) };
+                let signal_name = signal_name.to_str().unwrap();
+                // Seems that macOS's implementation of `strsignal` includes the signal number
+                #[cfg(target_os = "macos")]
+                log::info!("signal:    {}", signal_name);
+                #[cfg(not(target_os = "macos"))]
+                log::info!("signal:    {} ({})", signal_name, signal);
+            }
+
             // SAFETY: `None` is only returned if the iterator is empty.
             let len = *[real.len(), user.len(), sys.len()].iter().max().unwrap();
-            println!("real: {:>width$}", real, width = len);
-            println!("user: {:>width$}", user, width = len);
-            println!("sys:  {:>width$}", sys, width = len);
+            log::info!("real:      {:>width$}", real, width = len);
+            log::info!("user:      {:>width$}", user, width = len);
+            log::info!("sys:       {:>width$}", sys, width = len);
         }
         Ok(ForkResult::Child) => {
-            // TODO: use a logging lib rather than just printing
-            eprintln!("program: {}", args.command_line.join(" "));
-
-            let c_args = args
-                .command_line
-                .into_iter()
-                // SAFETY: Is there a way to pass null bytes as arguments on the command line?
-                .map(|s| CString::new(s).unwrap())
-                .collect::<Vec<_>>();
-
-            match execvp(&c_args[0], &c_args) {
-                Ok(_) => {}
-                Err(e) => panic!("Failed to exec child: {}", e),
-            }
+            // TODO: pass input?
+            let err = execvp(&c_args[0], &c_args).unwrap_err();
+            eprintln!("{}", err);
         }
-        Err(e) => panic!("failed to fork: {}", e),
+        Err(e) => panic!("Failed to fork: {}", e),
     }
 }
