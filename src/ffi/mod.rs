@@ -6,25 +6,47 @@ pub fn timeval_to_duration(t: libc::timeval) -> Duration {
 }
 
 pub fn wait_for_pid(pid: libc::pid_t) -> libc::rusage {
-    let mut u: MaybeUninit<libc::rusage> = MaybeUninit::uninit();
+    let mut usage: MaybeUninit<libc::rusage> = MaybeUninit::uninit();
     let mut status = 0;
     let options = 0;
 
     loop {
-        unsafe {
-            let r = libc::wait4(
+        let r = unsafe {
+            libc::wait4(
                 pid,
                 (&mut status) as *mut libc::c_int,
                 options,
-                u.as_mut_ptr(),
-            );
-            if r == -1 {
-                panic!("failed to wait4!");
-            } else if r == pid {
-                break;
-            }
+                usage.as_mut_ptr(),
+            )
+        };
+
+        if r == -1 {
+            panic!("failed to wait4!");
+        } else if r == pid {
+            break;
         }
     }
 
-    unsafe { u.assume_init() }
+    unsafe { usage.assume_init() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    fn timeval(tv_sec: i64, tv_usec: i32) -> libc::timeval {
+        libc::timeval { tv_sec, tv_usec }
+    }
+
+    #[test]
+    fn test_timeval_to_duration() {
+        assert_eq!(timeval_to_duration(timeval(0, 0)), Duration::new(0, 0));
+        assert_eq!(timeval_to_duration(timeval(0, 42)), Duration::new(0, 42000));
+        assert_eq!(timeval_to_duration(timeval(42, 0)), Duration::new(42, 0));
+        assert_eq!(
+            timeval_to_duration(timeval(42, 42)),
+            Duration::new(42, 42000)
+        );
+    }
 }
