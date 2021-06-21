@@ -53,7 +53,7 @@ fn main() {
             }
 
             // SAFETY: `None` is only returned if the iterator is empty.
-            let len = *[real.len(), user.len(), sys.len()].iter().max().unwrap();
+            let len = *[real.len(), user.len(), sys.len()].iter().max().unwrap() - 1;
             log::info!("real:      {:>width$}", real, width = len);
             log::info!("user:      {:>width$}", user, width = len);
             log::info!("sys:       {:>width$}", sys, width = len);
