@@ -67,7 +67,6 @@ fn main() {
             process::exit(return_code);
         }
         Ok(ForkResult::Child) => {
-            // TODO: pass input?
             let err = execvp(&c_args[0], &c_args).unwrap_err();
             eprintln!("{}", err);
         }
