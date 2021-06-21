@@ -7,6 +7,7 @@ use flexi_logger::{colored_default_format, Logger};
 use nix::unistd::{execvp, fork, ForkResult};
 use std::ffi::{CStr, CString};
 use std::time::Instant;
+use std::process;
 
 fn main() {
     Logger::try_with_env_or_str("info")
@@ -29,6 +30,7 @@ fn main() {
     let start = Instant::now();
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
+            log::info!("pid:       {}", child);
             let (status, usage) = ffi::wait_for_pid(child.as_raw());
             let real = start.elapsed();
 
@@ -37,8 +39,11 @@ fn main() {
             let user = fmt(ffi::timeval_to_duration(usage.ru_utime));
             let sys = fmt(ffi::timeval_to_duration(usage.ru_stime));
 
+            let mut return_code = 0;
             if libc::WIFEXITED(status) {
-                log::info!("exit code: {}", libc::WEXITSTATUS(status));
+                let exit_code = libc::WEXITSTATUS(status);
+                log::info!("exit code: {}", exit_code);
+                return_code = exit_code;
             }
             if libc::WIFSIGNALED(status) {
                 let signal = libc::WTERMSIG(status);
@@ -50,6 +55,7 @@ fn main() {
                 log::info!("signal:    {}", signal_name);
                 #[cfg(not(target_os = "macos"))]
                 log::info!("signal:    {} ({})", signal_name, signal);
+                return_code = signal;
             }
 
             // SAFETY: `None` is only returned if the iterator is empty.
@@ -57,6 +63,8 @@ fn main() {
             log::info!("real:      {:>width$}", real, width = len);
             log::info!("user:      {:>width$}", user, width = len);
             log::info!("sys:       {:>width$}", sys, width = len);
+
+            process::exit(return_code);
         }
         Ok(ForkResult::Child) => {
             // TODO: pass input?
