@@ -1,5 +1,12 @@
+pub mod mem;
+
 use std::mem::MaybeUninit;
 use std::time::Duration;
+
+pub fn cpu_count() -> u32 {
+    // SAFETY: TODO
+    unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) as u32 }
+}
 
 pub fn timeval_to_duration(t: libc::timeval) -> Duration {
     Duration::new(t.tv_sec as u64, (t.tv_usec as u32) * 1_000)
@@ -11,6 +18,7 @@ pub fn wait_for_pid(pid: libc::pid_t) -> (i32, libc::rusage) {
     let options = 0;
 
     loop {
+        // SAFETY: TODO
         let r = unsafe {
             libc::wait4(
                 pid,
@@ -27,6 +35,7 @@ pub fn wait_for_pid(pid: libc::pid_t) -> (i32, libc::rusage) {
         }
     }
 
+    // SAFETY: we have asserted that the return condition is not an error
     (status, unsafe { usage.assume_init() })
 }
 
