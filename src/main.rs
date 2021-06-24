@@ -11,6 +11,7 @@ use std::process;
 use std::time::Instant;
 
 // TODO: JSON output
+const NO_DATA: &str = "-";
 
 fn main() {
     Logger::try_with_env_or_str("info")
@@ -24,18 +25,28 @@ fn main() {
     log::info!("cmdline:          {}", args.command_line.join(" "));
 
     // CPU information
-    log::info!("cpu count:        {}", ffi::cpu_count());
+    log::info!(
+        "cpu count:        {}",
+        ffi::cpu_count().map_or(NO_DATA.into(), |n| n.to_string())
+    );
 
     // System memory information
     let fmt_bytes = |b| format!("{} ({})", b, ByteSize(b).to_string_as(true));
     let total = ffi::mem::memory_total();
+    let avail = ffi::mem::memory_available();
     let page_size = ffi::mem::page_size();
-    log::info!("mem_total:        {}", fmt_bytes(total));
-    match ffi::mem::memory_available() {
-        Ok(avail) => log::info!("mem_avail:        {}", fmt_bytes(avail)),
-        Err(e) => log::error!("{}", e)
-    }
-    log::info!("page_size:        {}", fmt_bytes(page_size));
+    log::info!(
+        "mem_total:        {}",
+        total.map_or(NO_DATA.into(), |n| fmt_bytes(n))
+    );
+    log::info!(
+        "mem_avail:        {}",
+        avail.map_or(NO_DATA.into(), |n| fmt_bytes(n))
+    );
+    log::info!(
+        "page_size:        {}",
+        page_size.map_or(NO_DATA.into(), |n| fmt_bytes(n))
+    );
 
     let c_args = args
         .command_line
@@ -53,7 +64,8 @@ fn main() {
             #[cfg(debug_assertions)]
             log::info!("pid:              {}", child);
 
-            let (status, usage) = ffi::wait_for_pid(child.as_raw());
+            let (status, usage) =
+                ffi::wait_for_pid(child.as_raw()).expect("Failed waiting for child");
             let real = start.elapsed();
             // NOTE: REAL_TIMER END: immediately after forked process has terminated
 

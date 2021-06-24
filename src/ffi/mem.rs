@@ -3,6 +3,7 @@
 use anyhow::{bail, Result};
 use libc::{integer_t, kern_return_t, mach_msg_type_number_t, mach_port_t, natural_t};
 use std::mem::{size_of, MaybeUninit};
+use crate::ffi::sysconf;
 
 type host_t = mach_port_t;
 type host_flavor_t = integer_t;
@@ -56,14 +57,12 @@ pub struct vm_statistics64 {
 pub const HOST_VM_INFO64_COUNT: usize = size_of::<vm_statistics64>() / size_of::<integer_t>();
 pub const HOST_VM_INFO64: usize = 4;
 
-pub fn page_size() -> u64 {
-    // SAFETY: TODO - this is currently "unsafe" since we don't check for `-1`
-    unsafe { libc::sysconf(libc::_SC_PAGESIZE) as u64 }
+pub fn page_size() -> Result<u64> {
+    sysconf(libc::_SC_PAGESIZE).map(|x| x as u64)
 }
-pub fn memory_total() -> u64 {
-    // SAFETY: TODO - this is currently "unsafe" since we don't check for `-1`
-    let n_pages = unsafe { libc::sysconf(libc::_SC_PHYS_PAGES) as u64 };
-    n_pages * page_size()
+pub fn memory_total() -> Result<u64> {
+    let n_pages = sysconf(libc::_SC_PHYS_PAGES).map(|x| x as u64)?;
+    Ok(n_pages * page_size()?)
 }
 
 pub fn memory_available() -> Result<u64> {
@@ -72,8 +71,7 @@ pub fn memory_available() -> Result<u64> {
 
     // TODO: doesn't take into account stolen pages, and need to double check calculations
     // https://stackoverflow.com/a/43300124/5552584
-    // SAFETY: TODO
-    let r = unsafe {
+    let ret = unsafe {
         host_statistics64(
             libc::mach_host_self(),
             HOST_VM_INFO64 as i32,
@@ -82,8 +80,8 @@ pub fn memory_available() -> Result<u64> {
         )
     };
 
-    if r != libc::KERN_SUCCESS {
-        bail!("Call to host_statistics64 returned non-zero result");
+    if ret != libc::KERN_SUCCESS {
+        bail!("Call to host_statistics64 returned non-zero result: {}", ret);
     }
 
     // SAFETY: we have asserted that the return code was successful
@@ -92,6 +90,6 @@ pub fn memory_available() -> Result<u64> {
     return Ok(
         (stats.external_page_count + stats.purgeable_count + stats.free_count
             - stats.speculative_count) as u64
-            * page_size(),
+            * page_size()?,
     );
 }

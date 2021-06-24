@@ -1,25 +1,40 @@
 pub mod mem;
 
+use anyhow::{bail, Result};
+use nix::errno::{errno, Errno};
 use std::mem::MaybeUninit;
 use std::time::Duration;
 
-pub fn cpu_count() -> u32 {
-    // SAFETY: TODO
-    unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) as u32 }
+pub fn cpu_count() -> Result<u32> {
+    sysconf(libc::_SC_NPROCESSORS_ONLN).map(|x| x as u32)
 }
 
 pub fn timeval_to_duration(t: libc::timeval) -> Duration {
     Duration::new(t.tv_sec as u64, (t.tv_usec as u32) * 1_000)
 }
 
-pub fn wait_for_pid(pid: libc::pid_t) -> (i32, libc::rusage) {
+pub fn sysconf(var: libc::c_int) -> Result<i64> {
+    // SAFETY: we're checking the return code and errno, should be good enough for our use cases
+    let raw = unsafe {
+        Errno::clear();
+        libc::sysconf(var as libc::c_int)
+    };
+
+    if raw == -1 && errno() != 0 {
+        bail!("Call to sysconf failed, errno: {}", Errno::last());
+    }
+
+    Ok(raw)
+}
+
+pub fn wait_for_pid(pid: libc::pid_t) -> Result<(i32, libc::rusage)> {
     let mut usage: MaybeUninit<libc::rusage> = MaybeUninit::uninit();
     let mut status = 0;
     let options = 0;
 
     loop {
-        // SAFETY: TODO
         let r = unsafe {
+            Errno::clear();
             libc::wait4(
                 pid,
                 (&mut status) as *mut libc::c_int,
@@ -29,14 +44,17 @@ pub fn wait_for_pid(pid: libc::pid_t) -> (i32, libc::rusage) {
         };
 
         if r == -1 {
-            panic!("failed to wait4!");
-        } else if r == pid {
+            bail!("Call to wait4 failed, errno: {}", Errno::last());
+        }
+
+        // The child process we were waiting for (pid) terminated
+        if r == pid {
             break;
         }
     }
 
     // SAFETY: we have asserted that the return condition is not an error
-    (status, unsafe { usage.assume_init() })
+    Ok((status, unsafe { usage.assume_init() }))
 }
 
 #[cfg(test)]
