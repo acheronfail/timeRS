@@ -24,6 +24,8 @@ pub struct Args {
 
     #[clap(setting = AllowHyphenValues, setting = AllowEmptyValues, setting = Required)]
     pub command_line: Vec<String>,
+
+    // TODO: JSON output
 }
 
 impl Args {

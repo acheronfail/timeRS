@@ -2,6 +2,7 @@ mod cli;
 mod ffi;
 mod fmt;
 
+use anyhow::Result;
 use bytesize::ByteSize;
 use cli::Args;
 use flexi_logger::{colored_default_format, Logger};
@@ -10,7 +11,6 @@ use std::ffi::{CStr, CString};
 use std::process;
 use std::time::Instant;
 
-// TODO: JSON output
 const NO_DATA: &str = "-";
 
 fn main() {
@@ -32,21 +32,10 @@ fn main() {
 
     // System memory information
     let fmt_bytes = |b| format!("{} ({})", b, ByteSize(b).to_string_as(true));
-    let total = ffi::mem::memory_total();
-    let avail = ffi::mem::memory_available();
-    let page_size = ffi::mem::page_size();
-    log::info!(
-        "mem_total:        {}",
-        total.map_or(NO_DATA.into(), |n| fmt_bytes(n))
-    );
-    log::info!(
-        "mem_avail:        {}",
-        avail.map_or(NO_DATA.into(), |n| fmt_bytes(n))
-    );
-    log::info!(
-        "page_size:        {}",
-        page_size.map_or(NO_DATA.into(), |n| fmt_bytes(n))
-    );
+    let fmt_res = |r: Result<u64>| r.map_or(NO_DATA.into(), |n| fmt_bytes(n));
+    log::info!("mem_total:        {}", fmt_res(ffi::mem::memory_total()));
+    log::info!("mem_avail:        {}", fmt_res(ffi::mem::memory_available()));
+    log::info!("page_size:        {}", fmt_res(ffi::mem::page_size()));
 
     let c_args = args
         .command_line
@@ -64,8 +53,7 @@ fn main() {
             #[cfg(debug_assertions)]
             log::info!("pid:              {}", child);
 
-            let (status, usage) =
-                ffi::wait_for_pid(child.as_raw()).expect("Failed waiting for child");
+            let (status, usage) = ffi::wait_for_pid(child.as_raw()).expect("Failed waiting for child");
             let real = start.elapsed();
             // NOTE: REAL_TIMER END: immediately after forked process has terminated
 
