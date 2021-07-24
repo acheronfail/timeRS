@@ -32,7 +32,16 @@ fn main() {
 
     // System memory information
     let fmt_bytes = |b| format!("{} ({})", b, ByteSize(b).to_string_as(true));
-    let fmt_res = |r: Result<u64>| r.map_or(NO_DATA.into(), |n| fmt_bytes(n));
+    let fmt_res = |r: Result<u64>| {
+        r.map_or_else(
+            |e| {
+                log::warn!("{}", e);
+                NO_DATA.into()
+            },
+            |n| fmt_bytes(n),
+        )
+    };
+
     log::info!("mem_total:        {}", fmt_res(ffi::mem::memory_total()));
     log::info!("mem_avail:        {}", fmt_res(ffi::mem::memory_available()));
     log::info!("page_size:        {}", fmt_res(ffi::mem::page_size()));

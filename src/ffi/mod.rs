@@ -63,7 +63,10 @@ mod tests {
     use std::time::Duration;
 
     fn timeval(tv_sec: i64, tv_usec: i32) -> libc::timeval {
-        libc::timeval { tv_sec, tv_usec }
+        #[cfg(target_os = "macos")]
+        return libc::timeval { tv_sec, tv_usec };
+        #[cfg(not(target_os = "macos"))]
+        return libc::timeval { tv_sec, tv_usec: tv_usec as i64 };
     }
 
     #[test]

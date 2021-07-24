@@ -3,7 +3,6 @@
 use anyhow::{bail, Result};
 use libc::{integer_t, kern_return_t, mach_msg_type_number_t, mach_port_t, natural_t};
 use std::mem::{size_of, MaybeUninit};
-use crate::ffi::sysconf;
 
 type host_t = mach_port_t;
 type host_flavor_t = integer_t;
@@ -56,14 +55,6 @@ pub struct vm_statistics64 {
 
 pub const HOST_VM_INFO64_COUNT: usize = size_of::<vm_statistics64>() / size_of::<integer_t>();
 pub const HOST_VM_INFO64: usize = 4;
-
-pub fn page_size() -> Result<u64> {
-    sysconf(libc::_SC_PAGESIZE).map(|x| x as u64)
-}
-pub fn memory_total() -> Result<u64> {
-    let n_pages = sysconf(libc::_SC_PHYS_PAGES).map(|x| x as u64)?;
-    Ok(n_pages * page_size()?)
-}
 
 pub fn memory_available() -> Result<u64> {
     let mut stats: MaybeUninit<vm_statistics64> = MaybeUninit::uninit();
