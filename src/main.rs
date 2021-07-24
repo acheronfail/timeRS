@@ -26,7 +26,7 @@ fn main() {
 
     // CPU information
     log::info!(
-        "cpu count:        {}",
+        "cpu_count:        {}",
         ffi::cpu_count().map_or(NO_DATA.into(), |n| n.to_string())
     );
 
