@@ -1,6 +1,6 @@
 [package]
 name = "timers"
-version = "0.1.0"
+version = "0.2.0"
 description = "Like GNU's time but in Rust! (timeRS)"
 homepage = "https://github.com/acheronfail/timers"
 repository = "https://github.com/acheronfail/timers"
