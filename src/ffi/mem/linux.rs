@@ -31,16 +31,19 @@ pub fn memory_available() -> Result<u64> {
         }
     }
 
-    // TODO: more error information here could be useful (use a macro to stringify parameter, etc)
-    let check_option = |o| match o {
-        Some(x) => Ok(x),
-        None => bail!("Failed to parse /proc/meminfo"),
-    };
+    macro_rules! check {
+        ($x:ident) => {
+            match $x {
+                Some(x) => Ok(x) as Result<i64>,
+                None => bail!("Failed to parse /proc/meminfo for {}", stringify!($x)),
+            }
+        };
+    }
 
-    let mut m_avail = check_option(m_avail)?;
-    let m_free = check_option(m_free)?;
-    let m_file = check_option(m_inactive_file)? - check_option(m_active_file)?;
-    let m_s_reclaimable = check_option(m_s_reclaimable)?;
+    let mut m_avail = check!(m_avail)?;
+    let m_free = check!(m_free)?;
+    let m_file = check!(m_inactive_file)? - check!(m_active_file)?;
+    let m_s_reclaimable = check!(m_s_reclaimable)?;
 
     // https://github.com/attractivechaos/runlog/blob/f09830c8c5bf71d3451dcbd2fed04fbfcc4be83a/runlog.c#L175
     if m_avail < 0 {
