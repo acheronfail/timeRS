@@ -11,6 +11,12 @@ pub enum TimeFormat {
     Micro
 }
 
+#[derive(Debug, ArgEnum, Clone, Copy)]
+pub enum OutputFormat {
+    Standard,
+    Json
+}
+
 #[derive(Parser, Debug)]
 #[clap(
   version = crate_version!(),
@@ -24,7 +30,8 @@ pub struct Args {
     #[clap(setting = AllowHyphenValues, setting = Required)]
     pub command_line: Vec<String>,
 
-    // TODO: JSON output
+    #[clap(short = 'f', long = "format", arg_enum)]
+    pub format: Option<OutputFormat>
 }
 
 impl Args {
