@@ -1,8 +1,8 @@
-use clap::AppSettings::{ColoredHelp, TrailingVarArg};
-use clap::ArgSettings::{AllowEmptyValues, AllowHyphenValues, Required};
-use clap::{Clap, crate_authors, crate_version};
+use clap::AppSettings::{TrailingVarArg};
+use clap::ArgSettings::{AllowHyphenValues, Required};
+use clap::{ArgEnum, Parser, crate_authors, crate_version};
 
-#[derive(Debug, Clap)]
+#[derive(Debug, ArgEnum, Clone, Copy)]
 pub enum TimeFormat {
     Normal,
     Seconds,
@@ -11,18 +11,17 @@ pub enum TimeFormat {
     Micro
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(
   version = crate_version!(),
   author = crate_authors!(),
-  setting = ColoredHelp,
   setting = TrailingVarArg,
 )]
 pub struct Args {
     #[clap(short = 't', long = "time", arg_enum)]
     pub time_format: Option<TimeFormat>,
 
-    #[clap(setting = AllowHyphenValues, setting = AllowEmptyValues, setting = Required)]
+    #[clap(setting = AllowHyphenValues, setting = Required)]
     pub command_line: Vec<String>,
 
     // TODO: JSON output
@@ -30,6 +29,6 @@ pub struct Args {
 
 impl Args {
     pub fn parse() -> Args {
-        <Args as Clap>::parse()
+        <Args as Parser>::parse()
     }
 }
