@@ -36,6 +36,11 @@ pub struct Args {
 
 impl Args {
     pub fn parse() -> Args {
-        <Args as Parser>::parse()
+        let mut parsed = <Args as Parser>::parse();
+        if parsed.format.is_none() {
+            parsed.format = Some(OutputFormat::Standard);
+        }
+
+        parsed
     }
 }
