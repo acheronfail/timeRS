@@ -1,5 +1,5 @@
-use std::time::Duration;
 use crate::cli::TimeFormat;
+use std::time::Duration;
 
 /// Returns the milliseconds, with nanoseconds contained in an `f64`.
 fn duration_millis_f64(d: Duration) -> f64 {

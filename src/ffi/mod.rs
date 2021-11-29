@@ -35,12 +35,7 @@ pub fn wait_for_pid(pid: libc::pid_t) -> Result<(i32, libc::rusage)> {
     loop {
         let r = unsafe {
             Errno::clear();
-            libc::wait4(
-                pid,
-                (&mut status) as *mut libc::c_int,
-                options,
-                usage.as_mut_ptr(),
-            )
+            libc::wait4(pid, (&mut status) as *mut libc::c_int, options, usage.as_mut_ptr())
         };
 
         if r == -1 {
@@ -66,7 +61,10 @@ mod tests {
         #[cfg(target_os = "macos")]
         return libc::timeval { tv_sec, tv_usec };
         #[cfg(not(target_os = "macos"))]
-        return libc::timeval { tv_sec, tv_usec: tv_usec as i64 };
+        return libc::timeval {
+            tv_sec,
+            tv_usec: tv_usec as i64,
+        };
     }
 
     #[test]
@@ -74,9 +72,6 @@ mod tests {
         assert_eq!(timeval_to_duration(timeval(0, 0)), Duration::new(0, 0));
         assert_eq!(timeval_to_duration(timeval(0, 42)), Duration::new(0, 42000));
         assert_eq!(timeval_to_duration(timeval(42, 0)), Duration::new(42, 0));
-        assert_eq!(
-            timeval_to_duration(timeval(42, 42)),
-            Duration::new(42, 42000)
-        );
+        assert_eq!(timeval_to_duration(timeval(42, 42)), Duration::new(42, 42000));
     }
 }

@@ -2,116 +2,15 @@ mod cli;
 mod ffi;
 mod fmt;
 
-use anyhow::Result;
 use bytesize::ByteSize;
-use cli::{Args, OutputFormat};
+use cli::Args;
 use flexi_logger::{colored_default_format, Logger};
 use nix::unistd::{execvp, fork, ForkResult};
-use serde::Serialize;
 use std::ffi::{CStr, CString};
-use std::fmt::Write;
 use std::process;
 use std::time::Instant;
 
-const NO_DATA: &str = "-";
-
-#[derive(Debug, Default, Serialize)]
-struct PreExec {
-    cmdline: String,
-    cpu_count: Option<u32>,
-    mem_total: Option<u64>,
-    mem_avail: Option<u64>,
-    page_size: Option<u64>,
-}
-
-#[derive(Debug, Default, Serialize)]
-struct PostExec {
-    exit_code: Option<i32>,
-    term_signal: Option<i32>,
-    term_signal_name: Option<String>,
-    time_real: u128,
-    time_user: u128,
-    time_sys: u128,
-    percent_cpu: f64,
-    max_rss: u64,
-    hard_page_faults: i64,
-    soft_page_faults: i64,
-    disk_inputs: i64,
-    disk_outputs: i64,
-    voluntary_csw: i64,
-    involuntary_csw: i64,
-}
-
-impl PreExec {
-    pub fn to_string(&self, format: OutputFormat) -> Result<String> {
-        match format {
-            OutputFormat::Json => Ok(serde_json::to_string(self)?),
-            OutputFormat::Standard => {
-                let mut out = String::new();
-                writeln!(&mut out, "cmdline:          {}", self.cmdline)?;
-                writeln!(
-                    &mut out,
-                    "cpu_count:        {}",
-                    self.cpu_count.map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                writeln!(
-                    &mut out,
-                    "mem_total:        {}",
-                    self.mem_total.map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                writeln!(
-                    &mut out,
-                    "mem_avail:        {}",
-                    self.mem_avail.map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                writeln!(
-                    &mut out,
-                    "page_size:        {}",
-                    self.page_size.map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                Ok(out)
-            }
-        }
-    }
-}
-
-impl PostExec {
-    pub fn to_string(&self, format: OutputFormat) -> Result<String> {
-        match format {
-            OutputFormat::Json => Ok(serde_json::to_string(self)?),
-            OutputFormat::Standard => {
-                let mut out = String::new();
-                writeln!(
-                    &mut out,
-                    "exit_code:        {}",
-                    self.exit_code.map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                writeln!(
-                    &mut out,
-                    "term_signal:      {}",
-                    self.term_signal.map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                writeln!(
-                    &mut out,
-                    "term_signal_name: {}",
-                    self.term_signal_name.as_ref().map_or(NO_DATA.into(), |x| x.to_string())
-                )?;
-                writeln!(&mut out, "time_real:        {}", self.time_real)?;
-                writeln!(&mut out, "time_user:        {}", self.time_user)?;
-                writeln!(&mut out, "time_sys:         {}", self.time_sys)?;
-                writeln!(&mut out, "percent_cpu:      {}", self.percent_cpu)?;
-                writeln!(&mut out, "max_rss:          {}", self.max_rss)?;
-                writeln!(&mut out, "hard_page_faults: {}", self.hard_page_faults)?;
-                writeln!(&mut out, "soft_page_faults: {}", self.soft_page_faults)?;
-                writeln!(&mut out, "disk_inputs:      {}", self.disk_inputs)?;
-                writeln!(&mut out, "disk_outputs:     {}", self.disk_outputs)?;
-                writeln!(&mut out, "voluntary_csw:    {}", self.voluntary_csw)?;
-                writeln!(&mut out, "involuntary_csw:  {}", self.involuntary_csw)?;
-                Ok(out)
-            }
-        }
-    }
-}
+use crate::fmt::stats::{PostExec, PreExec, NO_DATA};
 
 fn main() {
     Logger::try_with_env()
@@ -121,14 +20,13 @@ fn main() {
         .expect("Failed to initialise logger");
 
     let args = Args::parse();
-    let mut pre_exec = PreExec::default();
-
+    let mut pre_exec = PreExec::new(args.format.unwrap());
     pre_exec.cmdline = args.command_line.join(" ");
     pre_exec.cpu_count = ffi::cpu_count().ok();
     pre_exec.mem_total = ffi::mem::memory_total().ok();
     pre_exec.mem_avail = ffi::mem::memory_available().ok();
     pre_exec.page_size = ffi::mem::page_size().ok();
-    println!("{}", pre_exec.to_string(args.format.unwrap()).unwrap());
+    println!("{}", pre_exec);
 
     log::trace!("{:#?}", args);
     log::info!("cmdline:          {}", pre_exec.cmdline);
@@ -178,7 +76,7 @@ fn main() {
             #[cfg(not(target_os = "linux"))]
             let rss = usage.ru_maxrss as u64;
 
-            let mut post_exec = PostExec::default();
+            let mut post_exec = PostExec::new(args.format.unwrap());
             post_exec.time_real = real.as_nanos();
             post_exec.time_user = user.as_nanos();
             post_exec.time_sys = sys.as_nanos();
@@ -191,7 +89,7 @@ fn main() {
             post_exec.voluntary_csw = usage.ru_nvcsw;
             post_exec.involuntary_csw = usage.ru_nivcsw;
 
-            let fmt = fmt::duration_formatter(args.time_format);
+            let fmt = fmt::time::duration_formatter(args.time_format);
             let real = fmt(real);
             let user = fmt(user);
             let sys = fmt(sys);
@@ -242,7 +140,7 @@ fn main() {
             log::info!("voluntary_csw:    {}", usage.ru_nvcsw);
             log::info!("involuntary_csw:  {}", usage.ru_nivcsw);
 
-            println!("{}", post_exec.to_string(args.format.unwrap()).unwrap());
+            println!("{}", post_exec);
 
             // Exit with either the status code or the signal number of the forked process
             process::exit(post_exec.exit_code.unwrap_or(0));
