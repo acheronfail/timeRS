@@ -4,6 +4,8 @@ use anyhow::{bail, Result};
 use libc::{integer_t, kern_return_t, mach_msg_type_number_t, mach_port_t, natural_t};
 use std::mem::{size_of, MaybeUninit};
 
+use crate::ffi::mem::page_size;
+
 type host_t = mach_port_t;
 type host_flavor_t = integer_t;
 
@@ -79,8 +81,7 @@ pub fn memory_available() -> Result<u64> {
     let stats = unsafe { stats.assume_init() };
     log::trace!("{:#?}", stats);
     return Ok(
-        (stats.external_page_count + stats.purgeable_count + stats.free_count
-            - stats.speculative_count) as u64
+        (stats.external_page_count + stats.purgeable_count + stats.free_count - stats.speculative_count) as u64
             * page_size()?,
     );
 }

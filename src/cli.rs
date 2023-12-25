@@ -1,6 +1,6 @@
-use clap::AppSettings::{TrailingVarArg};
+use clap::AppSettings::TrailingVarArg;
 use clap::ArgSettings::{AllowHyphenValues, Required};
-use clap::{ArgEnum, Parser, crate_authors, crate_version};
+use clap::{crate_authors, crate_version, ArgEnum, Parser};
 
 #[derive(Debug, ArgEnum, Clone, Copy)]
 pub enum TimeFormat {
@@ -8,7 +8,7 @@ pub enum TimeFormat {
     Seconds,
     Milli,
     Nano,
-    Micro
+    Micro,
 }
 
 #[derive(Parser, Debug)]
@@ -23,7 +23,6 @@ pub struct Args {
 
     #[clap(setting = AllowHyphenValues, setting = Required)]
     pub command_line: Vec<String>,
-
     // TODO: JSON output
 }
 
