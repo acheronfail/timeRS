@@ -20,9 +20,16 @@ fn main() {
         .start()
         .expect("Failed to initialise logger");
 
-    let args = Args::parse();
+    let args = Args::parse().expect("failed to parse arguments");
     log::trace!("{:#?}", args);
-    log::info!("cmdline:          {}", args.command_line.join(" "));
+    log::info!(
+        "cmdline:          {}",
+        args.args
+            .iter()
+            .map(|os| os.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
 
     // CPU information
     log::info!(
@@ -47,10 +54,10 @@ fn main() {
     log::info!("page_size:        {}", fmt_res(ffi::mem::page_size()));
 
     let c_args = args
-        .command_line
+        .args
         .into_iter()
         // SAFETY: Is there a way to pass null bytes as arguments on the command line?
-        .map(|s| CString::new(s).unwrap())
+        .map(|s| CString::new(s.as_encoded_bytes()).unwrap())
         .collect::<Vec<_>>();
 
     // NOTE: REAL_TIMER START: immediately before forking the process
