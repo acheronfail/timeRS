@@ -44,10 +44,10 @@ pub struct vm_statistics64 {
     pub speculative_count: natural_t, /* # of pages speculative */
 
     /* added for rev1 */
-    pub decompressions: u64,              /* # of pages decompressed */
-    pub compressions: u64,                /* # of pages compressed */
-    pub swapins: u64,                     /* # of pages swapped in (via compression segments) */
-    pub swapouts: u64,                    /* # of pages swapped out (via compression segments) */
+    pub decompressions: u64,                         /* # of pages decompressed */
+    pub compressions: u64,                           /* # of pages compressed */
+    pub swapins: u64,                                /* # of pages swapped in (via compression segments) */
+    pub swapouts: u64,                               /* # of pages swapped out (via compression segments) */
     pub compressor_page_count: natural_t, /* # of pages used by the compressed pager to hold all the compressed data */
     pub throttled_count: natural_t,       /* # of pages throttled */
     pub external_page_count: natural_t,   /* # of pages that are file-backed (non-swap) */

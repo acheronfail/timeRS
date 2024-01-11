@@ -8,8 +8,8 @@ mod mem;
 
 pub use mem::*;
 
-use anyhow::Result;
 use crate::ffi::sysconf;
+use anyhow::Result;
 
 pub fn page_size() -> Result<u64> {
     sysconf(libc::_SC_PAGESIZE).map(|x| x as u64)
