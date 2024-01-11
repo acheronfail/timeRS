@@ -11,5 +11,6 @@ https://github.com/torvalds/linux/blob/acc657692aed438e9931438f8c923b2b107aebf9/
 I'm not the only one who's come across this issue, either:
 
 - https://jkz.wtf/random-linux-oddity-1-ru_maxrss
+- https://tbrindus.ca/sometimes-the-kernel-lies-about-process-memory-usage/
 - https://github.com/ziglang/gotta-go-fast/issues/23
 - https://github.com/golang/go/issues/32054
