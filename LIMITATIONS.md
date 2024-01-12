@@ -14,3 +14,14 @@ I'm not the only one who's come across this issue, either:
 - https://tbrindus.ca/sometimes-the-kernel-lies-about-process-memory-usage/
 - https://github.com/ziglang/gotta-go-fast/issues/23
 - https://github.com/golang/go/issues/32054
+
+If you read `man 5 proc` you'll see that it mentions the `rss` field and some others are inaccurate, and then it recommends reading `/proc/$PID/smaps` instead.
+
+So, I think the best workaround for users desiring to capture an accurate `rss` value, is to use `gdb` and then read `/proc/smaps_rollup`. For example:
+
+1. `gdb --args ./my_program some arguments`
+2. `(gdb) catch syscall exit exit_group` (catch the exit syscall)
+3. `(gdb) condition 1 $_thread == 1` (optional, but if the program is multithreaded this should help you catch the final exit in most cases. Obviously this will change depending on the debugged program)
+4. `(gdb) run`
+5. Once the program has been halted before the exit syscall, now dump `/proc/$PID/smaps_rollup` and extract the `Rss: ...` value from there
+
